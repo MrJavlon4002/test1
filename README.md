@@ -1,4 +1,4 @@
-# vLLM + Qwen3-30B-A3B-Thinking (FP8) + MCP (Tashkent time) + Open WebUI
+# vLLM + Qwen3-30B-A3B (FP8) + MCP (Tashkent time) + Open WebUI
 
 ## Prereqs
 1) NVIDIA driver + CUDA on host, and NVIDIA Container Toolkit installed  
