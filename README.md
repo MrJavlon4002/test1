@@ -24,6 +24,6 @@ curl http://localhost:8000/v1/chat/completions \
   }'
 
 ## About Qwen3 “Thinking”
-- FP8 variant: Qwen/Qwen3-30B-A3B-Thinking-2507-FP8 (262k ctx).  
+- FP8 variant: Qwen/Qwen3-30B-A3B-Instruct-2507-FP8 (262k ctx).  
   See Qwen docs for thinking/non-thinking toggles via `chat_template_kwargs`.  
   Example: `"extra_body": {"chat_template_kwargs": {"enable_thinking": true}}`  
