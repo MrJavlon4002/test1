@@ -1,0 +1,58 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm
+    ports:
+      - "8000:8000"
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    gpus: all
+    shm_size: "2g"
+    command: >
+      --model Qwen/Qwen3-30B-A3B-Instruct-2507-FP8
+      --host 0.0.0.0
+      --port 8000
+      --max-model-len 131072
+      --gpu-memory-utilization 0.95
+      --served-model-name qwen3-30b-a3b-instruct-fp8
+      --api-key token-abc123
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+
+  mcp-time:
+    build:
+      context: ./services/mcp-time
+      dockerfile: Dockerfile
+    container_name: mcp-time
+    environment:
+      - TZ=Asia/Tashkent
+    command: ["python", "server.py"]
+    depends_on:
+      - vllm
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: open-webui
+    ports:
+      - "3000:8080"
+    environment:
+      - OPENAI_API_BASE_URL=http://vllm:8000/v1
+      - OPENAI_API_KEY=token-abc123
+      - ENABLE_MODEL_SELECTOR=true
+      - DEFAULT_MODEL=qwen3-30b-a3b-instruct-fp8
+      - ENABLE_PERSISTENT_CONFIG=False
+      - OLLAMA_BASE_URL=
+      # Optional: fully disable Ollama discovery if you saw connection attempts
+      # - ENABLE_OLLAMA=false
+    depends_on:
+      - vllm
+    volumes:
+      - webui-data:/app/backend/data
+
+volumes:
+  hf-cache:
+  webui-data:
+
