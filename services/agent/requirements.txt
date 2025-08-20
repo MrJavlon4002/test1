@@ -1,0 +1,4 @@
+pydantic-ai>=0.7
+fastapi>=0.111
+uvicorn[standard]>=0.30
+mcp-server-time>=0.3

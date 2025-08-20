@@ -2,8 +2,7 @@ services:
   vllm:
     image: vllm/vllm-openai:latest
     container_name: vllm
-    ports:
-      - "8000:8000"
+    ports: ["8000:8000"]
     environment:
       - HF_TOKEN=${HF_TOKEN:-}
       - VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
@@ -21,38 +20,55 @@ services:
       --api-key token-abc123
     volumes:
       - hf-cache:/root/.cache/huggingface
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- --header='Authorization: Bearer token-abc123' http://localhost:8000/v1/models >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
 
-  mcp-time:
+  agent:
     build:
-      context: ./services/mcp-time
+      context: ./services/agent
       dockerfile: Dockerfile
-    container_name: mcp-time
+    container_name: agent
     environment:
-      - TZ=Asia/Tashkent
-    command: ["python", "server.py"]
+      # PydanticAI → vLLM (OpenAI-compatible)
+      - OPENAI_BASE_URL=http://vllm:8000/v1
+      - OPENAI_API_KEY=token-abc123
+      # Feature toggles
+      - USE_MCP=true         # false = Step 4 (custom @Tool), true = Step 5 (MCP time)
+      - ENABLE_AIRBNB=false  # true = Step 6 (Airbnb MCP via npx)
+      - LOCAL_TIMEZONE=Asia/Tashkent
     depends_on:
-      - vllm
+      vllm:
+        condition: service_healthy
+    ports: ["8081:8081"]     # simple HTTP API to talk to the agent
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:latest
     container_name: open-webui
-    ports:
-      - "3000:8080"
+    ports: ["3000:8080"]
     environment:
       - OPENAI_API_BASE_URL=http://vllm:8000/v1
       - OPENAI_API_KEY=token-abc123
       - ENABLE_MODEL_SELECTOR=true
       - DEFAULT_MODEL=qwen3-30b-a3b-instruct-fp8
-      - ENABLE_PERSISTENT_CONFIG=False
-      - OLLAMA_BASE_URL=
-      # Optional: fully disable Ollama discovery if you saw connection attempts
-      # - ENABLE_OLLAMA=false
+      - ENABLE_PERSISTENT_CONFIG=false
+      - ENABLE_OLLAMA=false
     depends_on:
-      - vllm
+      vllm:
+        condition: service_healthy
     volumes:
       - webui-data:/app/backend/data
+    restart: unless-stopped
 
 volumes:
   hf-cache:
   webui-data:
-
